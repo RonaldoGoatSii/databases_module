@@ -19,7 +19,6 @@ def pg_connect() -> psycopg.Connection:
     # One connection per call keeps the example simple. Session 11 introduces a pool.
     return psycopg.connect(DATABASE_URL)
 
-
 def create_tables() -> None:
     with pg_connect() as conn:
         conn.execute(
@@ -28,7 +27,18 @@ def create_tables() -> None:
                 id         integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 msg        text NOT NULL,
                 created_at timestamptz NOT NULL DEFAULT now()
-            )
+            );
             """
         )
- 
+        
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS items (
+                id         integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                hello_id   integer REFERENCES hello(id) ON DELETE CASCADE,
+                name       text NOT NULL,
+                price      numeric(10, 2) NOT NULL,
+                created_at timestamptz NOT NULL DEFAULT now()
+            );
+            """
+        )
