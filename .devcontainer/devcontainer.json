@@ -1,0 +1,28 @@
+{
+  "name": "Astral Python 3.14 Environment",
+  "image": "ghcr.io/astral-sh/uv:python3.14-bookworm",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.vscode-pylance",
+        "cweijan.vscode-postgresql-client2",
+        "mongodb.mongodb-vscode",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableMoby": true
+    }
+  },
+
+  "postCreateCommand": "uv sync --all-extras || pip install psycopg python-dotenv fastapi django",
+
+  "remoteUser": "root"
+}
