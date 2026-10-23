@@ -2,7 +2,7 @@
 
 ## Exercise 1
 
-![Texto alternativo da imagem](img/dbHealth.png)
+![](img/dbHealth.png)
 
 ## Exercise 2: The Database Data Model (`s01_fastapi`)
 
@@ -49,3 +49,15 @@ The relational model centralized and generated via `app/clients.py` in PostgreSQ
   * Queries filtering by date ranges or sorting by `created_at` become progressively slower without secondary indexes.
 * **Concurrent Writes (Simultaneous Users):**
   * PostgreSQL manages concurrent write operations securely through its transactional isolation engine (ACID). Row-level locks (*row-level locking*) ensure data integrity and prevent data loss or corruption during simultaneous accesses.
+
+## Exercise 5: Suitability for MongoDB and Redis
+
+While relational databases like PostgreSQL excel at handling structured data with strict relationships, ACID guarantees, and complex joins, certain data patterns benefit significantly from alternative database engines:
+
+* **MongoDB (Document-Oriented NoSQL Database):**
+  * **When it fits better:** MongoDB is ideal if the data structure is semi-structured, highly nested, or prone to frequent schema changes (e.g., storing user profiles with dynamic attributes, product catalogs with varying specifications, or raw JSON event logs). 
+  * **Why:** Instead of splitting data across multiple normalized tables and joining them back (like `hello` and `items`), MongoDB allows you to store related records as **embedded documents** inside a single BSON document. This eliminates the need for expensive JOIN operations and matches modern application payloads (like JSON APIs) natively.
+
+* **Redis (In-Memory Key-Value Store):**
+  * **When it fits better:** Redis is optimal for high-throughput, low-latency workloads where data retrieval speed is the absolute priority, such as user session storage, real-time leaderboards, rate-limiting counters, caching database queries, or pub/sub message brokers.
+  * **Why:** Because Redis stores all data directly in **RAM** (main memory) rather than on disk, read and write operations happen in microseconds (handling millions of operations per second). However, it lacks the complex query capabilities and relational integrity of PostgreSQL, making it unsuitable as a primary persistent store for relational business data.
