@@ -1,0 +1,13 @@
+[project]
+name = "crud-seed"
+version = "0.1.0"
+description = "Session 04 challenge: reproducible bulk load of Pagila rental rows"
+requires-python = ">=3.12"
+dependencies = [
+    "faker>=30",
+    "psycopg[binary]>=3.2",
+]
+ 
+[tool.uv]
+package = false
+ 
