@@ -1,0 +1,121 @@
+=== Q1: median 0.1 ms (runs: 0.1, 0.1, 0.1)
+SELECT count(*) FROM big_rental WHERE customer_id = 42 AND returned_at IS NULL;
+Aggregate  (cost=10.35..10.36 rows=1 width=8) (actual time=0.029..0.030 rows=1.00 loops=1)
+  Buffers: shared hit=3
+  ->  Index Only Scan using idx_q1_open_by_customer on big_rental  (cost=0.29..10.09 rows=103 width=0) (actual time=0.020..0.024 rows=93.00 loops=1)
+        Index Cond: (customer_id = 42)
+        Heap Fetches: 0
+        Index Searches: 1
+        Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=105
+Planning Time: 0.252 ms
+Execution Time: 0.060 ms
+
+
+=== Q2: median 3.3 ms (runs: 10.3, 3.3, 3.0)
+SELECT * FROM big_rental WHERE rented_at >= now() - interval '1 day' ORDER BY rented_at;
+Sort  (cost=5045.18..5049.67 rows=1795 width=24) (actual time=3.164..3.225 rows=1879.00 loops=1)
+  Sort Key: rented_at
+  Sort Method: quicksort  Memory: 122kB
+  Buffers: shared hit=1751
+  ->  Bitmap Heap Scan on big_rental  (cost=34.34..4948.16 rows=1795 width=24) (actual time=0.400..2.924 rows=1879.00 loops=1)
+        Recheck Cond: (rented_at >= (now() - '1 day'::interval))
+        Heap Blocks: exact=1740
+        Buffers: shared hit=1748
+        ->  Bitmap Index Scan on idx_rented_at  (cost=0.00..33.90 rows=1795 width=0) (actual time=0.258..0.258 rows=1879.00 loops=1)
+              Index Cond: (rented_at >= (now() - '1 day'::interval))
+              Index Searches: 1
+              Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=127
+Planning Time: 0.330 ms
+Execution Time: 3.318 ms
+
+
+=== Q3: median 79.1 ms (runs: 69.0, 79.1, 86.2)
+SELECT * FROM big_rental WHERE rented_at::date = current_date - 10;
+Gather  (cost=1000.00..31402.67 rows=10000 width=24) (actual time=0.633..78.981 rows=1872.00 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=8869 read=3867
+  ->  Parallel Seq Scan on big_rental  (cost=0.00..29402.67 rows=4167 width=24) (actual time=0.637..73.971 rows=624.00 loops=3)
+        Filter: ((rented_at)::date = (CURRENT_DATE - 10))
+        Rows Removed by Filter: 666043
+        Buffers: shared hit=8869 read=3867
+Planning:
+  Buffers: shared hit=99
+Planning Time: 0.282 ms
+Execution Time: 79.113 ms
+
+
+=== Q3b: median 3.1 ms (runs: 6.7, 2.8, 3.1)
+SELECT * FROM big_rental
+WHERE rented_at >= current_date - 10
+  AND rented_at <  current_date - 9;
+Bitmap Heap Scan on big_rental  (cost=38.86..4970.92 rows=1797 width=24) (actual time=0.298..2.733 rows=1872.00 loops=1)
+  Recheck Cond: ((rented_at >= (CURRENT_DATE - 10)) AND (rented_at < (CURRENT_DATE - 9)))
+  Heap Blocks: exact=1747
+  Buffers: shared hit=1759
+  ->  Bitmap Index Scan on idx_rented_at  (cost=0.00..38.41 rows=1797 width=0) (actual time=0.164..0.164 rows=1872.00 loops=1)
+        Index Cond: ((rented_at >= (CURRENT_DATE - 10)) AND (rented_at < (CURRENT_DATE - 9)))
+        Index Searches: 1
+        Buffers: shared hit=12
+Planning:
+  Buffers: shared hit=122
+Planning Time: 0.323 ms
+Execution Time: 2.816 ms
+
+
+=== Q4: median 102.6 ms (runs: 107.0, 102.3, 102.6)
+SELECT customer_id, count(*) FROM big_rental WHERE returned_at IS NOT NULL GROUP BY customer_id;
+Finalize GroupAggregate  (cost=26140.13..26321.04 rows=600 width=12) (actual time=100.088..102.188 rows=600.00 loops=1)
+  Group Key: customer_id
+  Buffers: shared hit=10200 read=2550
+  ->  Gather Merge  (cost=26140.13..26307.84 rows=1440 width=12) (actual time=100.083..102.048 rows=1800.00 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=10200 read=2550
+        ->  Sort  (cost=25140.10..25141.60 rows=600 width=12) (actual time=97.940..97.966 rows=600.00 loops=3)
+              Sort Key: customer_id
+              Sort Method: quicksort  Memory: 43kB
+              Buffers: shared hit=10200 read=2550
+              Worker 0:  Sort Method: quicksort  Memory: 43kB
+              Worker 1:  Sort Method: quicksort  Memory: 43kB
+              ->  Partial HashAggregate  (cost=25106.42..25112.42 rows=600 width=12) (actual time=97.777..97.819 rows=600.00 loops=3)
+                    Group Key: customer_id
+                    Batches: 1  Memory Usage: 73kB
+                    Buffers: shared hit=10186 read=2550
+                    Worker 0:  Batches: 1  Memory Usage: 73kB
+                    Worker 1:  Batches: 1  Memory Usage: 73kB
+                    ->  Parallel Seq Scan on big_rental  (cost=0.00..21069.33 rows=807417 width=4) (actual time=0.118..40.637 rows=646640.00 loops=3)
+                          Filter: (returned_at IS NOT NULL)
+                          Rows Removed by Filter: 20027
+                          Buffers: shared hit=10186 read=2550
+Planning:
+  Buffers: shared hit=142
+Planning Time: 0.327 ms
+Execution Time: 102.294 ms
+
+
+=== Q5: median 0.9 ms (runs: 2.7, 0.9, 0.9)
+SELECT * FROM big_rental
+WHERE customer_id IN (7, 42, 99) AND rented_at >= now() - interval '30 days'
+ORDER BY rented_at DESC;
+Sort  (cost=1015.52..1016.22 rows=279 width=24) (actual time=0.851..0.861 rows=295.00 loops=1)
+  Sort Key: rented_at DESC
+  Sort Method: quicksort  Memory: 36kB
+  Buffers: shared hit=305
+  ->  Bitmap Heap Scan on big_rental  (cost=16.15..1004.19 rows=279 width=24) (actual time=0.103..0.799 rows=295.00 loops=1)
+        Recheck Cond: ((customer_id = ANY ('{7,42,99}'::integer[])) AND (rented_at >= (now() - '30 days'::interval)))
+        Heap Blocks: exact=290
+        Buffers: shared hit=302
+        ->  Bitmap Index Scan on idx_customer_rented  (cost=0.00..16.08 rows=279 width=0) (actual time=0.069..0.069 rows=295.00 loops=1)
+              Index Cond: ((customer_id = ANY ('{7,42,99}'::integer[])) AND (rented_at >= (now() - '30 days'::interval)))
+              Index Searches: 3
+              Buffers: shared hit=12
+Planning:
+  Buffers: shared hit=165
+Planning Time: 0.344 ms
+Execution Time: 0.887 ms
+

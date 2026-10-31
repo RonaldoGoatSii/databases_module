@@ -1,0 +1,130 @@
+=== Q1: median 37.0 ms (runs: 37.0, 30.0, 40.1)
+SELECT count(*) FROM big_rental WHERE customer_id = 42 AND returned_at IS NULL;
+Finalize Aggregate  (cost=24152.99..24153.00 rows=1 width=8) (actual time=28.354..29.913 rows=1.00 loops=1)
+  Buffers: shared hit=2586 read=10150
+  ->  Gather  (cost=24152.77..24152.98 rows=2 width=8) (actual time=28.209..29.895 rows=3.00 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=2586 read=10150
+        ->  Partial Aggregate  (cost=23152.77..23152.78 rows=1 width=8) (actual time=26.016..26.017 rows=1.00 loops=3)
+              Buffers: shared hit=2586 read=10150
+              ->  Parallel Seq Scan on big_rental  (cost=0.00..23152.67 rows=43 width=0) (actual time=3.339..25.994 rows=31.00 loops=3)
+                    Filter: ((returned_at IS NULL) AND (customer_id = 42))
+                    Rows Removed by Filter: 666636
+                    Buffers: shared hit=2586 read=10150
+Planning:
+  Buffers: shared hit=38
+Planning Time: 0.165 ms
+Execution Time: 29.963 ms
+
+
+=== Q2: median 91.0 ms (runs: 91.0, 91.0, 68.6)
+SELECT * FROM big_rental WHERE rented_at >= now() - interval '1 day' ORDER BY rented_at;
+Gather Merge  (cost=28354.51..28560.78 rows=1771 width=24) (actual time=88.641..90.871 rows=1880.00 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=3508 read=9304
+  ->  Sort  (cost=27354.49..27356.33 rows=738 width=24) (actual time=86.403..86.449 rows=626.67 loops=3)
+        Sort Key: rented_at
+        Sort Method: quicksort  Memory: 49kB
+        Buffers: shared hit=3508 read=9304
+        Worker 0:  Sort Method: quicksort  Memory: 48kB
+        Worker 1:  Sort Method: quicksort  Memory: 50kB
+        ->  Parallel Seq Scan on big_rental  (cost=0.00..27319.33 rows=738 width=24) (actual time=0.659..86.085 rows=626.67 loops=3)
+              Filter: (rented_at >= (now() - '1 day'::interval))
+              Rows Removed by Filter: 666040
+              Buffers: shared hit=3432 read=9304
+Planning:
+  Buffers: shared hit=47
+Planning Time: 0.211 ms
+Execution Time: 90.985 ms
+
+
+=== Q3: median 74.7 ms (runs: 76.7, 74.7, 73.2)
+SELECT * FROM big_rental WHERE rented_at::date = current_date - 10;
+Gather  (cost=1000.00..31402.67 rows=10000 width=24) (actual time=0.954..74.583 rows=1872.00 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=4278 read=8458
+  ->  Parallel Seq Scan on big_rental  (cost=0.00..29402.67 rows=4167 width=24) (actual time=1.308..70.668 rows=624.00 loops=3)
+        Filter: ((rented_at)::date = (CURRENT_DATE - 10))
+        Rows Removed by Filter: 666043
+        Buffers: shared hit=4278 read=8458
+Planning:
+  Buffers: shared hit=36
+Planning Time: 0.207 ms
+Execution Time: 74.697 ms
+
+
+=== Q3b: median 43.0 ms (runs: 49.7, 41.6, 43.0)
+SELECT * FROM big_rental
+WHERE rented_at >= current_date - 10
+  AND rented_at <  current_date - 9;
+Gather  (cost=1000.00..34749.23 rows=1799 width=24) (actual time=0.813..41.499 rows=1872.00 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=5124 read=7612
+  ->  Parallel Seq Scan on big_rental  (cost=0.00..33569.33 rows=750 width=24) (actual time=0.776..37.754 rows=624.00 loops=3)
+        Filter: ((rented_at >= (CURRENT_DATE - 10)) AND (rented_at < (CURRENT_DATE - 9)))
+        Rows Removed by Filter: 666043
+        Buffers: shared hit=5124 read=7612
+Planning:
+  Buffers: shared hit=44
+Planning Time: 0.173 ms
+Execution Time: 41.606 ms
+
+
+=== Q4: median 106.9 ms (runs: 139.5, 104.8, 106.9)
+SELECT customer_id, count(*) FROM big_rental WHERE returned_at IS NOT NULL GROUP BY customer_id;
+Finalize GroupAggregate  (cost=26140.13..26321.04 rows=600 width=12) (actual time=102.598..104.643 rows=600.00 loops=1)
+  Group Key: customer_id
+  Buffers: shared hit=5984 read=6766
+  ->  Gather Merge  (cost=26140.13..26307.84 rows=1440 width=12) (actual time=102.592..104.499 rows=1800.00 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=5984 read=6766
+        ->  Sort  (cost=25140.10..25141.60 rows=600 width=12) (actual time=100.412..100.434 rows=600.00 loops=3)
+              Sort Key: customer_id
+              Sort Method: quicksort  Memory: 43kB
+              Buffers: shared hit=5984 read=6766
+              Worker 0:  Sort Method: quicksort  Memory: 43kB
+              Worker 1:  Sort Method: quicksort  Memory: 43kB
+              ->  Partial HashAggregate  (cost=25106.42..25112.42 rows=600 width=12) (actual time=100.248..100.291 rows=600.00 loops=3)
+                    Group Key: customer_id
+                    Batches: 1  Memory Usage: 73kB
+                    Buffers: shared hit=5970 read=6766
+                    Worker 0:  Batches: 1  Memory Usage: 73kB
+                    Worker 1:  Batches: 1  Memory Usage: 73kB
+                    ->  Parallel Seq Scan on big_rental  (cost=0.00..21069.33 rows=807417 width=4) (actual time=0.262..41.741 rows=646640.00 loops=3)
+                          Filter: (returned_at IS NOT NULL)
+                          Rows Removed by Filter: 20027
+                          Buffers: shared hit=5970 read=6766
+Planning:
+  Buffers: shared hit=68
+Planning Time: 0.205 ms
+Execution Time: 104.752 ms
+
+
+=== Q5: median 49.6 ms (runs: 38.8, 49.6, 51.2)
+SELECT * FROM big_rental
+WHERE customer_id IN (7, 42, 99) AND rented_at >= now() - interval '30 days'
+ORDER BY rented_at DESC;
+Gather Merge  (cost=31448.33..31480.71 rows=278 width=24) (actual time=47.812..49.530 rows=295.00 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=6892 read=5920
+  ->  Sort  (cost=30448.31..30448.60 rows=116 width=24) (actual time=44.564..44.569 rows=98.33 loops=3)
+        Sort Key: rented_at DESC
+        Sort Method: quicksort  Memory: 28kB
+        Buffers: shared hit=6892 read=5920
+        Worker 0:  Sort Method: quicksort  Memory: 29kB
+        Worker 1:  Sort Method: quicksort  Memory: 28kB
+        ->  Parallel Seq Scan on big_rental  (cost=0.00..30444.33 rows=116 width=24) (actual time=1.707..44.425 rows=98.33 loops=3)
+              Filter: ((customer_id = ANY ('{7,42,99}'::integer[])) AND (rented_at >= (now() - '30 days'::interval)))
+              Rows Removed by Filter: 666568
+              Buffers: shared hit=6816 read=5920
+Planning:
+  Buffers: shared hit=97
+Planning Time: 0.234 ms
+Execution Time: 49.565 ms
+
