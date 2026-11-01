@@ -1,0 +1,15 @@
+[project]
+name = "ex09-api"
+version = "0.1.0"
+description = "Session 09 exercise: least privilege and injection-safe writes"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "psycopg[binary]>=3.2",
+    "pymongo>=4.8",
+    "redis>=5.0",
+]
+
+[tool.uv]
+package = false
