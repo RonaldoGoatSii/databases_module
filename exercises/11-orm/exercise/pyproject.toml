@@ -1,0 +1,12 @@
+[project]
+name = "ex11-orm"
+version = "0.1.0"
+description = "Session 11 exercise: ORM mapping, generated SQL and N+1"
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy>=2",
+    "psycopg[binary]>=3.2",
+]
+
+[tool.uv]
+package = false
