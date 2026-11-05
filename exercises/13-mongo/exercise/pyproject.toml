@@ -1,0 +1,12 @@
+[project]
+name = "ex13-mongo"
+version = "0.1.0"
+description = "Session 13 exercise: documents from Pagila, operations and validation in MongoDB"
+requires-python = ">=3.12"
+dependencies = [
+    "pymongo>=4.8",
+    "psycopg[binary]>=3.2",
+]
+
+[tool.uv]
+package = false
